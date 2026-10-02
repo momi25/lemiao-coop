@@ -1,7 +1,7 @@
-LEMIAO CO-OP LAUNCHER 1.1 / SAVE BROWSER
+LEMIAO CO-OP LAUNCHER 1.1.1 / SAVE BROWSER
 
 Send Lemiao-Launcher.exe to your friend, or share the GitHub release download:
-https://github.com/momi25/lemiao-coop/releases/download/launcher-1.1-save-browser/Lemiao-Launcher.zip
+https://github.com/momi25/lemiao-coop/releases/download/launcher-1.1.1-save-browser/Lemiao-Launcher.zip
 
 Both PCs need Steam, the supported Elden Ring PC version and Seamless Co-op
 installed separately. Double-click the launcher. It finds the game, checks for
