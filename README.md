@@ -1,13 +1,20 @@
-LEMIAO CO-OP LAUNCHER 1.1.1 / SAVE BROWSER
+LEMIAO CO-OP LAUNCHER 1.2 / SAVE BROWSER + SETUP REPAIR
 
 Send Lemiao-Launcher.exe to your friend, or share the GitHub release download:
-https://github.com/momi25/lemiao-coop/releases/download/launcher-1.1.1-save-browser/Lemiao-Launcher.zip
+https://github.com/momi25/lemiao-coop/releases/download/lemiao-update-2/Lemiao-Launcher.zip
 
 Both PCs need Steam, the supported Elden Ring PC version and Seamless Co-op
 installed separately. Double-click the launcher. It finds the game, checks for
 updates and builds a private installation from each player's own game files.
 The first installation can take several minutes and needs internet access.
 Only press PLAY SEAMLESS CO-OP when you want to start the game.
+
+If an earlier setup failed with UnicodeDecodeError while checking tasklist,
+press CHECK UPDATES to download generation 2 and retry. The installer now
+reads Windows process names as bytes, regardless of the Windows language.
+Launcher 1.2 keeps setup errors visible and shows how to retry. You do not
+need to delete your saves or reinstall Elden Ring. The gameplay files are
+unchanged by this setup repair; the initial build still takes several minutes.
 
 Use CO-OP SETTINGS to set the same password on both PCs. Your own password and
 other settings carry across updates. Existing rch4 saves are kept; first setup
