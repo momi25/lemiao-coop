@@ -1,7 +1,7 @@
-LEMIAO CO-OP LAUNCHER
+LEMIAO CO-OP LAUNCHER 1.1 / SAVE BROWSER
 
 Send Lemiao-Launcher.exe to your friend, or share the GitHub release download:
-https://github.com/momi25/lemiao-coop/releases/latest
+https://github.com/momi25/lemiao-coop/releases/download/launcher-1.1-save-browser/Lemiao-Launcher.zip
 
 Both PCs need Steam, the supported Elden Ring PC version and Seamless Co-op
 installed separately. Double-click the launcher. It finds the game, checks for
@@ -13,6 +13,29 @@ Use CO-OP SETTINGS to set the same password on both PCs. Your own password and
 other settings carry across updates. Existing rch4 saves are kept; first setup
 backs up saves and copies your own character only if that profile is absent.
 Compare the version displayed in the launcher before joining your friend.
+
+CHOOSE A SAVE
+Quit Elden Ring through its menu, then click CHOOSE SAVE in the launcher.
+Choose your Steam save folder, click BROWSE / IMPORT, select your own save
+(.sl2, .co2, .rch4 or a save backup), then click USE THIS SAVE. This selects a
+whole save file, including its character slots; choose the character through
+Load Game after pressing Play. Importing and selecting never start the game.
+
+An import is copied ONCE to a separate ER0000.lXXX file in your Steam save
+folder. The original and existing playthroughs are not overwritten. Future
+progress is saved to that copy, and the launcher remembers your selection.
+Use CHOOSE SAVE again to resume another listed profile, including Existing
+save. Browsing the original again imports a NEW separate playthrough.
+
+The chosen profile survives gameplay updates and Previous Build. Backups
+are kept under %LOCALAPPDATA%\LemiaoCoop\Launcher\save-backups on import,
+selection and before Play. The launcher checks the basic save container;
+it cannot guarantee a save's internal integrity or reassign another person's
+save to your Steam account. A missing selected file blocks Play instead of
+silently importing the old original and resetting your progress.
+
+Launcher-only updates require downloading the new launcher once. Gameplay
+updates continue to install automatically from the signed mod release feed.
 
 Whenever a new mod release is published to this repository, reopening the
 launcher checks its signed update manifest and installs it automatically.
