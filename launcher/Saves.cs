@@ -111,7 +111,7 @@ public sealed class SaveBrowser:Form
             SaveManager.ValidateFile(manager.Target(Selected));DialogResult=DialogResult.OK;Close();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Save selection");}};Controls.Add(use);
         Controls.Add(new Label {Text="Switching does not start the game. Choose characters through Load Game.",Location=new Point(24,319),Size=new Size(600,24),Font=new Font("Segoe UI",9)});
         var selected=(state.save_profiles??new List<SaveProfile>()).FirstOrDefault(p=>p.id==state.selected_save);
-        if(accounts.Items.Count!=0){int index=accounts.Items.IndexOf(selected==null?manager.ActiveAccount:selected.account);accounts.SelectedIndex=index<0?0:index;}
+        if(accounts.Items.Count!=0){string preferred=selected==null?manager.ActiveAccount:selected.account;int index=preferred==null?-1:accounts.Items.IndexOf(preferred);accounts.SelectedIndex=index<0?0:index;}
         else{browse.Enabled=false;path.Text="No Steam save folder found. Choose Save after your own account has an Elden Ring save.";}
     }
     void Populate(){profiles.Items.Clear();Selected=null;Existing=null;pendingSource=null;use.Enabled=false;string account=(string)accounts.SelectedItem;
@@ -172,5 +172,6 @@ static class SaveTests
         require(Directory.GetFiles(Path.Combine(home,"save-backups"),"*.sha256",SearchOption.AllDirectories).Length>=4);
         require(Core.Hash(source)==originalHash&&Core.Hash(ordinary)==ordinaryHash);
         var wrongSteam=new SaveManager(root,home,()=>false,()=>other);blocked=false;try{wrongSteam.Select(state,current,settings,statePath);}catch{blocked=true;}require(blocked);
+        using(var browser=new SaveBrowser(manager,new State(),settings)){require(browser.Controls.OfType<ComboBox>().Count()==2);}
     }
 }
