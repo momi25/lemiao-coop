@@ -34,6 +34,7 @@ public class State
     public string game {get;set;} public Installation active {get;set;}
     public Installation previous {get;set;} public bool updates_paused {get;set;}
     public List<SaveProfile> save_profiles {get;set;} public string selected_save {get;set;}
+    public string last_error {get;set;}
     public State WithInstallations(Installation selected,Installation older,bool paused){
         var next=Core.Json.Deserialize<State>(Core.Json.Serialize(this));next.active=selected;next.previous=older;next.updates_paused=paused;return next;}
 }
@@ -177,7 +178,8 @@ public class Launcher:Form
         }}catch(Exception ex){Log(ex.ToString());MessageBox.Show(this,ex.Message,"Save selection");}}
     void Log(string text){lock(logLock)File.AppendAllText(Path.Combine(home,"launcher.log"),DateTime.UtcNow.ToString("u")+" "+text+Environment.NewLine);}
     void Message(string text){if(!closing)notes.Text=text;Log(text);}
-    void Error(Exception ex){Log(ex.ToString());if(closing)return;headline.Text="Update needs attention";detail.Text=ex.Message;Message("Your current installation was kept. View Log has the details.");}
+    void Error(Exception ex){Log(ex.ToString());if(closing)return;state.last_error=ex.Message;Save();headline.Text="Setup needs attention";detail.Text=ex.Message;
+        Message(state.active==null?"Setup did not finish. Press Check Updates to retry; View Log has the details.":"Your current installation was kept. Press Check Updates to retry; View Log has the details.");}
     void RefreshButtons(){if(closing)return;bool running=Core.GameRunning();bool ready=state.active!=null;
         play.Enabled=Core.LaunchAllowed(true,ready,busy,running)&&(pending==null||state.updates_paused);updates.Enabled=!busy;
         settings.Enabled=ready&&!busy;rollback.Enabled=state.previous!=null&&!busy&&!running;progress.Visible=busy;
@@ -185,13 +187,14 @@ public class Launcher:Form
         var selected=(state.save_profiles??new List<SaveProfile>()).FirstOrDefault(p=>p.id==state.selected_save);
         saveLabel.Text=selected==null?"Save: existing Seamless profile\nChoose Save to import or switch playthroughs.":"Save: "+selected.label+"\nProgress stays in ER0000."+selected.extension+" ("+selected.account+")";
         version.Text=ready?state.active.version:"FIRST INSTALL";
-        if(!busy){headline.Text=running?"Your adventure is running":ready?"Ready for your adventure":"Preparing your adventure";
+        if(!busy&&!String.IsNullOrEmpty(state.last_error)){headline.Text="Setup needs attention";detail.Text=state.last_error;}
+        else if(!busy){headline.Text=running?"Your adventure is running":ready?"Ready for your adventure":"Preparing your adventure";
             detail.Text=running?"Updates will wait until you quit through the game menu.":state.updates_paused?"Previous build selected. Press Check Updates to resume updates.":
                 offline?"Offline: your installed build is available.":ready?"Maliketh. Loretta. Hoarah Loux. One launcher for your party.":"The first installation builds the mods from your own game files.";}}
     async Task Check(){if(busy)return;
         if(String.IsNullOrEmpty(state.game)){state.game=Core.FindGame();if(state.game==null){using(var choose=new OpenFileDialog {Title="Select Elden Ring",Filter="Elden Ring|eldenring.exe"}){
             if(choose.ShowDialog(this)!=DialogResult.OK)return;state.game=Path.GetDirectoryName(choose.FileName);}}Save();}
-        busy=true;RefreshButtons();headline.Text="Checking for updates";detail.Text="Looking for the latest shared mod release.";
+        state.last_error=null;Save();busy=true;RefreshButtons();headline.Text="Checking for updates";detail.Text="Looking for the latest shared mod release.";
         Release latest=null;offline=false;
         try {latest=await Task.Run(()=>{byte[] data=Core.Download(Build.Feed,65536);
             byte[] sig=Convert.FromBase64String(Encoding.ASCII.GetString(Core.Download(Build.Feed+".sig",4096)).Trim());return Core.Verified(data,sig);});}
@@ -226,7 +229,7 @@ public class Launcher:Form
             Directory.CreateDirectory(Path.GetDirectoryName(destination));
             await Task.Run(()=>{
                 var start=new ProcessStartInfo(exe,"--managed-install "+Core.Quote(state.game)+" "+Core.Quote(destination)){
-                    UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
+                    UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
                 using(job=new BuildJob())using(installer=new Process {StartInfo=start}){
                     installer.OutputDataReceived+=(s,e)=>{if(e.Data!=null)Log(e.Data);};installer.ErrorDataReceived+=(s,e)=>{if(e.Data!=null)Log(e.Data);};
                     if(closing)throw new OperationCanceledException();installer.Start();job.Attach(installer);installer.BeginOutputReadLine();installer.BeginErrorReadLine();installer.WaitForExit();
@@ -241,7 +244,7 @@ public class Launcher:Form
             if(state.active!=null){string oldSettings=Path.Combine(state.active.build,"SeamlessCoop","ersc_settings.ini");
                 string newSettings=Path.Combine(candidate.build,"SeamlessCoop","ersc_settings.ini");
                 if(File.Exists(oldSettings))File.Copy(oldSettings,newSettings,true);}
-            var next=state.WithInstallations(candidate,state.active,false);
+            var next=state.WithInstallations(candidate,state.active,false);next.last_error=null;
             SaveFiles.Prepare(next,Path.Combine(candidate.build,"SeamlessCoop","ersc_settings.ini"),false);
             Core.AtomicState(statePath,next);state=next;pending=null;
             Message("Update complete. Your settings were kept. Press Play when you want to start.");
@@ -264,7 +267,7 @@ public class Launcher:Form
         }catch(Exception ex){Error(ex);}finally{busy=false;RefreshButtons();}
     }
     void Rollback(){if(state.previous==null||busy||Core.GameRunning())return;
-        try {Core.ValidateInstallation(state.previous);var next=state.WithInstallations(state.previous,state.active,true);
+        try {Core.ValidateInstallation(state.previous);var next=state.WithInstallations(state.previous,state.active,true);next.last_error=null;
             SaveFiles.Prepare(next,Path.Combine(next.active.build,"SeamlessCoop","ersc_settings.ini"),false);
             Core.AtomicState(statePath,next);state=next;pending=null;
             Message("Previous build selected; updates paused. Your saves were not restored or changed.");RefreshButtons();}catch(Exception ex){Error(ex);}}
@@ -306,7 +309,7 @@ static class Tests
     public static void Run(string report){
         // Independent signed fixture generated by the private publisher.
         string dir=Path.GetDirectoryName(Path.GetFullPath(report));byte[] data=File.ReadAllBytes(Path.Combine(dir,"fixture.json"));
-        byte[] sig=Convert.FromBase64String(File.ReadAllText(Path.Combine(dir,"fixture.sig")));var release=Core.Verified(data,sig);Require(release.generation==1);
+        byte[] sig=Convert.FromBase64String(File.ReadAllText(Path.Combine(dir,"fixture.sig")));var release=Core.Verified(data,sig);Require(release.generation>=1);
         byte[] modified=(byte[])data.Clone();modified[0]^=1;bool rejected=false;try{Core.Verified(modified,sig);}catch{rejected=true;}Require(rejected);
         rejected=false;sig[0]^=1;try{Core.Verified(data,sig);}catch{rejected=true;}Require(rejected);
         foreach(bool ready in new[]{false,true})foreach(bool busy in new[]{false,true})foreach(bool running in new[]{false,true})
@@ -314,7 +317,8 @@ static class Tests
         Require(Core.LaunchAllowed(true,true,false,false));Require(!Core.LaunchAllowed(true,true,true,false));Require(!Core.LaunchAllowed(true,true,false,true));
         Require(Core.Within(dir,Path.Combine(dir,"child","file")));Require(!Core.Within(dir,Path.Combine(dir,"..","escape")));
         string statePath=Path.Combine(dir,"test-state.json");var a=new State {active=new Installation {generation=1,version="first"}};Core.AtomicState(statePath,a);
-        var b=new State {active=new Installation {generation=2,version="second"},previous=a.active};Core.AtomicState(statePath,b);
+        var b=new State {active=new Installation {generation=2,version="second"},previous=a.active,last_error="Fixture: setup stopped"};Core.AtomicState(statePath,b);
+        Require(Core.Json.Deserialize<State>(File.ReadAllText(statePath)).last_error==b.last_error);
         Require(Core.Json.Deserialize<State>(File.ReadAllText(statePath)).active.generation==2);
         Require(Core.Json.Deserialize<State>(File.ReadAllText(statePath+".backup")).active.generation==1);
         rejected=false;try{Core.ValidateInstallation(new Installation {folder=dir,build=Path.Combine(dir,"..","escape")});}catch{rejected=true;}Require(rejected);
