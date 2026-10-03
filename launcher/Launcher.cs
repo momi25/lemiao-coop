@@ -35,6 +35,7 @@ public class State
     public Installation previous {get;set;} public bool updates_paused {get;set;}
     public List<SaveProfile> save_profiles {get;set;} public string selected_save {get;set;}
     public string last_error {get;set;}
+    public string last_attempt_folder {get;set;}
     public State WithInstallations(Installation selected,Installation older,bool paused){
         var next=Core.Json.Deserialize<State>(Core.Json.Serialize(this));next.active=selected;next.previous=older;next.updates_paused=paused;return next;}
 }
@@ -130,7 +131,7 @@ public class Launcher:Form
     readonly string home=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"LemiaoCoop","Launcher");
     State state;bool busy,offline,pendingBundled;volatile bool closing;Release pending;Process installer;BuildJob job;
     static readonly object logLock=new object();
-    Button play,updates,settings,rollback,saves;Label headline,detail,version,saveLabel;ProgressBar progress;TextBox notes;System.Windows.Forms.Timer timer;
+    Button play,updates,settings,rollback,saves,diagnostics;Label headline,detail,version,saveLabel;ProgressBar progress;TextBox notes;System.Windows.Forms.Timer timer;PCReport lastPC;
     SaveManager SaveFiles {get{return new SaveManager(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"EldenRing"),home,Core.GameRunning,Core.SteamAccount);}}
     string statePath {get{return Path.Combine(home,"state.json");}}
     static Color Ink=Color.FromArgb(15,20,21),Card=Color.FromArgb(24,31,31),Gold=Color.FromArgb(211,175,109),Muted=Color.FromArgb(160,170,164);
@@ -153,7 +154,8 @@ public class Launcher:Form
         var logs=Button("VIEW LOG",new Point(661,458),new Size(199,44),false);logs.Click+=(s,e)=>{
             string log=Path.Combine(home,"launcher.log");if(File.Exists(log))Process.Start(new ProcessStartInfo("notepad.exe",Core.Quote(log)){UseShellExecute=false});};Controls.Add(logs);
         saves=Button("CHOOSE SAVE...",new Point(40,520),new Size(195,44),false);saves.Click+=(s,e)=>ChooseSave();Controls.Add(saves);
-        saveLabel=new Label {Location=new Point(247,521),Size=new Size(610,48),ForeColor=Muted};Controls.Add(saveLabel);
+        saveLabel=new Label {Location=new Point(247,521),Size=new Size(397,48),ForeColor=Muted};Controls.Add(saveLabel);
+        diagnostics=Button("CHECK THIS PC",new Point(661,520),new Size(199,44),false);diagnostics.Click+=async(s,e)=>await Diagnose();Controls.Add(diagnostics);
         progress=new ProgressBar {Location=new Point(40,595),Size=new Size(820,5),Style=ProgressBarStyle.Marquee,Visible=false};Controls.Add(progress);
         notes=new TextBox {Location=new Point(40,615),Size=new Size(820,55),ReadOnly=true,Multiline=true,BorderStyle=BorderStyle.None,BackColor=Ink,ForeColor=Muted,Text="Updates are checked automatically. Your previous build stays available."};Controls.Add(notes);
         Directory.CreateDirectory(home);state=File.Exists(statePath)?Core.Json.Deserialize<State>(File.ReadAllText(statePath)):new State();
@@ -169,6 +171,11 @@ public class Launcher:Form
     Button Button(string text,Point location,Size size,bool primary){var b=new Button {Text=text,Location=location,Size=size,FlatStyle=FlatStyle.Flat,
         BackColor=primary?Gold:Card,ForeColor=primary?Ink:Gold,Font=new Font("Segoe UI",primary?13:9,FontStyle.Bold),Cursor=Cursors.Hand};b.FlatAppearance.BorderColor=Color.FromArgb(64,75,67);b.FlatAppearance.BorderSize=primary?0:1;return b;}
     void Save(){Core.AtomicState(statePath,state);}
+    async Task Diagnose(){if(busy)return;busy=true;RefreshButtons();headline.Text="Checking this PC";detail.Text="Checking local files, downloads and private tools. The game will not start.";
+        try{lastPC=await Task.Run(()=>PCDoctor.Run(state,home,true,true));if(closing)return;
+            Message(lastPC.summary);if(!lastPC.compatible){state.last_error=lastPC.Problem;Save();}
+            using(var dialog=new PCResults(lastPC))dialog.ShowDialog(this);
+        }catch(Exception ex){Error(ex);}finally{busy=false;RefreshButtons();}}
     string SettingsPath {get{return Path.Combine(state.active.build,"SeamlessCoop","ersc_settings.ini");}}
     void ChooseSave(){if(busy||state.active==null||Core.GameRunning())return;
         try{using(var browser=new SaveBrowser(SaveFiles,state,SettingsPath)){
@@ -180,15 +187,27 @@ public class Launcher:Form
             Message("Save selected. Your progress will continue in this profile; the original was kept. Press Play when ready.");RefreshButtons();
         }}catch(Exception ex){Log(ex.ToString());MessageBox.Show(this,ex.Message,"Save selection");}}
     void Log(string text){lock(logLock)File.AppendAllText(Path.Combine(home,"launcher.log"),DateTime.UtcNow.ToString("u")+" "+text+Environment.NewLine);}
+    void BuildProgress(string line){string stage=null;
+        if(line.StartsWith("Downloading the private Python"))stage="Downloading the private build tools.";
+        else if(line.StartsWith("Installing build tools"))stage="Installing build tools. First setup can take 10–20 minutes or longer.";
+        else if(line.StartsWith("Build dependencies ready"))stage="Tools ready. Building Maliketh from your own game files.";
+        else if(line.StartsWith("Native item data built"))stage="Maliketh data ready. Preparing movement and the new equipment.";
+        else if(line.StartsWith("Lemiao sword:"))stage="Sword ready. Building the shield and remaining equipment.";
+        else if(line.StartsWith("Forge equipment built"))stage="Equipment ready. Checking models and textures.";
+        else if(line.StartsWith("Loretta installed"))stage="Loretta ready. Building Hoarah Loux and Crimson Verdict.";
+        else if(line.StartsWith("Hoarah Loux and Crimson"))stage="Hoarah Loux ready. Preparing the Dragonlord pet.";
+        else if(line.StartsWith("Dragonlord pet packed"))stage="Pet ready. Verifying the final shop, archives and gameplay files.";
+        else if(line.StartsWith("READY."))stage="Build complete. Checking this PC and preparing Play.";
+        if(stage!=null&&!closing&&IsHandleCreated){string text=stage;BeginInvoke((Action)(()=>{if(!closing&&busy)detail.Text=text;}));}}
     void Message(string text){if(!closing)notes.Text=text;Log(text);}
     void Error(Exception ex){Log(ex.ToString());if(closing)return;state.last_error=ex.Message;Save();headline.Text="Setup needs attention";detail.Text=ex.Message;
         Message(state.active==null?"Setup did not finish. Press Check Updates to retry; View Log has the details.":"Your current installation was kept. Press Check Updates to retry; View Log has the details.");}
     void RefreshButtons(){if(closing)return;bool running=Core.GameRunning();bool ready=state.active!=null;
-        play.Enabled=Core.LaunchAllowed(true,ready,busy,running)&&(pending==null||state.updates_paused);updates.Enabled=!busy;
+        play.Enabled=Core.LaunchAllowed(true,ready,busy,running)&&(pending==null||state.updates_paused)&&(lastPC==null||lastPC.compatible);updates.Enabled=!busy;diagnostics.Enabled=!busy;
         settings.Enabled=ready&&!busy;rollback.Enabled=state.previous!=null&&!busy&&!running;progress.Visible=busy;
         saves.Enabled=ready&&!busy&&!running;
         var selected=(state.save_profiles??new List<SaveProfile>()).FirstOrDefault(p=>p.id==state.selected_save);
-        saveLabel.Text=selected==null?"Save: existing Seamless profile\nChoose Save to import or switch playthroughs.":"Save: "+selected.label+"\nProgress stays in ER0000."+selected.extension+" ("+selected.account+")";
+        saveLabel.Text=selected==null?"Save: existing Seamless profile\nChoose Save to import or switch playthroughs.":"Save: "+selected.label+"\nProgress stays in ER0000."+selected.extension;
         version.Text=ready?state.active.version:"FIRST INSTALL";
         if(!busy&&!String.IsNullOrEmpty(state.last_error)){headline.Text="Setup needs attention";detail.Text=state.last_error;}
         else if(!busy){headline.Text=running?"Your adventure is running":ready?"Ready for your adventure":"Preparing your adventure";
@@ -197,7 +216,10 @@ public class Launcher:Form
     async Task Check(){if(busy)return;
         if(String.IsNullOrEmpty(state.game)){state.game=Core.FindGame();if(state.game==null){using(var choose=new OpenFileDialog {Title="Select Elden Ring",Filter="Elden Ring|eldenring.exe"}){
             if(choose.ShowDialog(this)!=DialogResult.OK)return;state.game=Path.GetDirectoryName(choose.FileName);}}Save();}
-        state.last_error=null;Save();busy=true;RefreshButtons();headline.Text="Checking for updates";detail.Text="Looking for the latest shared mod release.";
+        state.last_error=null;Save();busy=true;RefreshButtons();headline.Text="Checking your PC";detail.Text="Checking the local game and Seamless before downloading an update.";
+        try{lastPC=await Task.Run(()=>PCDoctor.Run(state,home,false,false,false));if(!lastPC.compatible)throw new Exception(lastPC.Problem);}
+        catch(Exception ex){Error(ex);busy=false;RefreshButtons();return;}
+        if(closing){busy=false;return;}headline.Text="Checking for updates";detail.Text="Looking for the latest shared mod release.";
         Release latest=null;offline=false;bool useBundled=false;
         try {latest=await Task.Run(()=>Core.ReadFeed());}
         catch(WebException){offline=true;Message("Couldn't reach the update server. Your installed build is still available.");}
@@ -231,11 +253,12 @@ public class Launcher:Form
             if(Core.GameRunning())throw new Exception("The game started during download. Quit it through its menu to apply the update.");
             string destination=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"LemiaoCoop","builds",r.generation+"-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            state.last_attempt_folder=destination;Save();
             await Task.Run(()=>{
                 var start=new ProcessStartInfo(exe,"--managed-install "+Core.Quote(state.game)+" "+Core.Quote(destination)){
                     UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
                 using(job=new BuildJob())using(installer=new Process {StartInfo=start}){
-                    installer.OutputDataReceived+=(s,e)=>{if(e.Data!=null)Log(e.Data);};installer.ErrorDataReceived+=(s,e)=>{if(e.Data!=null)Log(e.Data);};
+                    installer.OutputDataReceived+=(s,e)=>{if(e.Data!=null){Log(e.Data);BuildProgress(e.Data);}};installer.ErrorDataReceived+=(s,e)=>{if(e.Data!=null)Log(e.Data);};
                     if(closing)throw new OperationCanceledException();installer.Start();job.Attach(installer);installer.BeginOutputReadLine();installer.BeginErrorReadLine();installer.WaitForExit();
                     if(installer.ExitCode!=0)throw new Exception("The update build stopped. Check View Log; your previous build is still selected.");}
                 installer=null;job=null;
@@ -249,6 +272,7 @@ public class Launcher:Form
                 string newSettings=Path.Combine(candidate.build,"SeamlessCoop","ersc_settings.ini");
                 if(File.Exists(oldSettings))File.Copy(oldSettings,newSettings,true);}
             var next=state.WithInstallations(candidate,state.active,false);next.last_error=null;
+            lastPC=await Task.Run(()=>PCDoctor.Run(next,home,false,true));if(!lastPC.compatible)throw new Exception(lastPC.Problem);
             SaveFiles.Prepare(next,Path.Combine(candidate.build,"SeamlessCoop","ersc_settings.ini"),false);
             Core.AtomicState(statePath,next);state=next;pending=null;
             Message("Update complete. Your settings were kept. Press Play when you want to start.");
@@ -263,6 +287,8 @@ public class Launcher:Form
         busy=true;RefreshButtons();
         try {await Task.Run(()=>Core.ValidateInstallation(state.active));
             if(closing||Core.GameRunning())return;
+            lastPC=await Task.Run(()=>PCDoctor.Run(state,home,false,false));if(!lastPC.compatible)throw new Exception(lastPC.Problem);
+            if(Process.GetProcessesByName("steam").Length==0)throw new Exception("Open Steam and sign in before pressing Play.");
             SaveFiles.Prepare(state,SettingsPath,true);
             if(closing||Core.GameRunning())return;
             string script=Path.Combine(state.active.build,"Launch-Maliketh-Coop.ps1");
@@ -292,6 +318,10 @@ static class Program
         ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
         try {
             if(args.Length==2&&args[0]=="--self-test"){Tests.Run(args[1]);return 0;}
+            if(args.Length==2&&args[0]=="--diagnose"){
+                string home=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"LemiaoCoop","Launcher");string path=Path.Combine(home,"state.json");
+                var state=File.Exists(path)?Core.Json.Deserialize<State>(File.ReadAllText(path)):new State();if(String.IsNullOrEmpty(state.game))state.game=Core.FindGame();
+                var report=PCDoctor.Run(state,home,true,true);File.WriteAllText(args[1],Core.Json.Serialize(report));return report.compatible?0:2;}
             if(args.Length==2&&args[0]=="--verify-feed"){var r=Core.ReadFeed();
                 File.WriteAllText(args[1],Core.Json.Serialize(r));return 0;}
             if(args.Length==5&&args[0]=="--adopt"){
@@ -334,6 +364,7 @@ static class Tests
         using(var worker=new Process {StartInfo=new ProcessStartInfo("powershell.exe","-NoProfile -NonInteractive -Command Start-Sleep -Seconds 30"){UseShellExecute=false,CreateNoWindow=true}}){
             using(var owned=new BuildJob()){worker.Start();owned.Attach(worker);owned.Dispose();Require(worker.WaitForExit(3000));}}
         SaveTests.Run(dir,Require);
+        DoctorTests.Run(dir,Require);
         File.WriteAllText(report,Core.Json.Serialize(new {status="passed",checks=count,game_launched=false,production_state_changed=false}));
     }
 }
