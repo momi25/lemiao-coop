@@ -1,13 +1,35 @@
-LEMIAO CO-OP LAUNCHER 1.2.1 / SAVE BROWSER + SETUP REPAIR
+LEMIAO CO-OP LAUNCHER 1.3 / AUTOMATIC PC CHECKS
 
 Send Lemiao-Launcher.exe to your friend, or share the GitHub release download:
-https://github.com/momi25/lemiao-coop/releases/download/lemiao-update-3/Lemiao-Launcher.zip
+https://github.com/momi25/lemiao-coop/releases/download/lemiao-update-4/Lemiao-Launcher.zip
 
 Both PCs need Steam, the supported Elden Ring PC version and Seamless Co-op
 installed separately. Double-click the launcher. It finds the game, checks for
 updates and builds a private installation from each player's own game files.
-The first installation can take several minutes and needs internet access.
+The first installation can take 10-20 minutes or longer and needs internet
+access. The launcher shows which item or build stage it is preparing.
 Only press PLAY SEAMLESS CO-OP when you want to start the game.
+
+CHECKS ON EACH PC
+Checks run automatically before updates, after setup and before Play. They
+check Windows architecture, supported game and Seamless hashes, original game
+archives, local write access, Unicode filenames, free disk space, the private
+tools and final gameplay files. This build uses its own Python and .NET tools;
+the Python dependency versions are pinned. System Python is not required.
+
+CHECK THIS PC runs the full local diagnostic, including download reachability
+and private runtime tests. Use EXPORT REPORT to save Lemiao-PC-check.json
+and send it manually if setup fails. Reports exclude save contents, passwords,
+Steam IDs and personal folder paths; nothing is uploaded automatically.
+Both verified installations should show gameplay match key 82d8091b4ae8a1fb.
+This key checks matching gameplay files, not live multiplayer behavior.
+
+The complete installer was tested from scratch with newly downloaded private
+tools in a folder containing spaces and non-English characters. It produced
+the accepted gameplay hashes without reading saves or launching Elden Ring.
+These are installation and compatibility checks; they do not prove that the
+game will render, that every runtime crash is fixed, or that two-PC gameplay
+works. Those still need a user-started game test on each actual PC.
 
 If an earlier setup failed with UnicodeDecodeError while checking tasklist,
 press CHECK UPDATES to download the repaired installer and retry. The installer now
