@@ -1,0 +1,72 @@
+{
+  "version": "0.9.1",
+  "game_exe_sha256": "1a3547101327f65d0c76da2f9190ac0aa66871ea42bae2aecc61e11a8b597891",
+  "seamless_dll_sha256": "fcd11a1849fd37851bb449be30f1525cf498f63fd1fa568c4e15030ebe7cb251",
+  "controller_sha256": "5f78e70d244a59c3196f4c5779e0d4d4b3ee3e7834a664864531251af9ec2d14",
+  "gameplay_files": {
+    "regulation.bin": "f8347d28e8cab0322438750e92df71a1267321079365f1ee0ce03da306f3f06f",
+    "action/script/c0000.hks": "bf44ed9e6296082a6c891233451632f4e819f38fc0907a0736a43619a69d8de4",
+    "action/script/c9520.hks": "5d9ea4b76573f6a464b5dde7ca7ec27728144ee6cbe4796a1b735706d60542b0",
+    "chr/c9520.anibnd.dcx": "44a64e8ae0e395302ee73258b5ebf046a09a25e4addf71ac982edd22cad4af46",
+    "chr/c9520.behbnd.dcx": "37a71179ecee8a64ed9764eda9d2f181f2df35343dded4864de2bfbb967b08bf",
+    "chr/c9520.chrbnd.dcx": "1dcafda2675a7be0c100f29aece97857e4906cfc606720a0959e5685605122b2",
+    "chr/c9520_div00.anibnd.dcx": "f99b51022bdb0045369e743301d272f4b12d7c6b96c4f97f5ea5c5ce45495f28",
+    "chr/c9520_div01.anibnd.dcx": "0594c66b03949d1894ac88d1ee003585617d37c3c22b36994dcab9327a1bd60e",
+    "chr/c9520_div02.anibnd.dcx": "cd483a88e5e3f5eb8bc5cf324c6d1c15ca65447b611bea629aa23148c0cad048",
+    "chr/c9520_div03.anibnd.dcx": "a0a9bd2edba5f82341675d47dc87343560befc5247e431fb78236b4daae2355b",
+    "chr/c9520_div04.anibnd.dcx": "3b086447082104d34c09b207a2d73bb756dc2a243b550a398e6b92f8eade7262",
+    "chr/c9520_h.texbnd.dcx": "a294f819a441940492a317f3aac0ac2c9e9263391a1f74dc38673ba8305b4678",
+    "chr/c9520_l.texbnd.dcx": "d530740d85a8f3624d388d3d39bf03f567a74dc4110443837947b12ce206d607",
+    "menu/hi/01_common.sblytbnd.dcx": "84de570dc462115a5936c51dfb5056d77f4a1d2783fb2e422440695da09a62cb",
+    "menu/hi/01_common.tpf.dcx": "1da3ff0a69de07b00d68dcd17a4da6e889ab7c54b207eaa3b4fa61eb801e631a",
+    "msg/engus/item_dlc02.msgbnd.dcx": "a187c21470924dcbc00332640e9ca4cf6c659f0356b56b725bab49832f8cf803",
+    "parts/wp_a_9800.partsbnd.dcx": "02143c6d54feff6ffb0902966055ed730f438a53bfdd1bcc82b61fccb698ef80",
+    "parts/wp_a_9800_l.partsbnd.dcx": "02143c6d54feff6ffb0902966055ed730f438a53bfdd1bcc82b61fccb698ef80",
+    "parts/wp_a_9801.partsbnd.dcx": "58e7376adca7ac9a0245f5aee27d23754191ee0a9d94d74abacc445f017599bf",
+    "parts/wp_a_9801_l.partsbnd.dcx": "58e7376adca7ac9a0245f5aee27d23754191ee0a9d94d74abacc445f017599bf",
+    "parts/wp_a_9802.partsbnd.dcx": "b9c4fa9b873e6c591edb24625c5a455232945eb51924febe6d991d96cc365fae",
+    "parts/wp_a_9802_l.partsbnd.dcx": "b9c4fa9b873e6c591edb24625c5a455232945eb51924febe6d991d96cc365fae",
+    "script/talk/m60_00_00_00.talkesdbnd.dcx": "560b0b3476b06f54258ddc2f859429ebbfa0fe6491b88ff325336a9a0c628043"
+  },
+  "custom_fusion_pose_enabled": false,
+  "transformations": "solo/session host only",
+  "peer_visuals_and_damage_tested": false,
+  "model_bounds_corrected": true,
+  "audio_files": {
+    "lemmiaooo.wav": "4d5aeedef202788664b7b28fb71b65040ab6f80c91da13e8e761009bfc738973",
+    "loretta.wav": "c4dccf30bf9e61f90107395469f8a18dca35fabe4734d208dfa54e592c6fe264",
+    "warrior.wav": "996bf3a5b5bfbffca6a7ea9a6cba38bbf8f5ce4bc6beb078cdca1720b961ece8"
+  },
+  "warrior_gameplay_tested": false,
+  "pet_gameplay_tested": false,
+  "pet_visuals_synchronized": false,
+  "pet_enabled": "solo/session host; local cosmetic follower",
+  "shop_hotfix": {
+    "range": [
+      190050000,
+      190050026
+    ],
+    "native_range": [
+      100500,
+      100524
+    ],
+    "other_merchant_stock_preserved": true,
+    "version": "0.9.1 shop hotfix"
+  },
+  "pet_crash_hotfix": {
+    "private_character": 9520,
+    "native_motion_ids": [
+      20,
+      2000,
+      3032,
+      20018
+    ],
+    "waits_for_animation_readiness": true,
+    "gameplay_tested": false,
+    "archive_file_alignment": 16,
+    "native_path_hash_tables": true,
+    "revision": "archive-repair-4",
+    "all_generated_binders_normalized": true
+  },
+  "revision": "archive-repair-4"
+}
